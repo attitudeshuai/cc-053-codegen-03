@@ -71,13 +71,13 @@ func (p *Processor) ProcessRecording(ctx context.Context, t *asynq.Task) error {
 	peakDB := -3.5
 
 	if sampleRate != 16000 {
-		p.recordingRepo.UpdateStatus(payload.RecordingID, "rejected", "sample rate must be 16kHz")
+		p.recordingRepo.Reject(payload.RecordingID, "system", "sample rate must be 16kHz")
 		return fmt.Errorf("invalid sample rate: %d", sampleRate)
 	}
 
 	// Validate peak level
 	if peakDB > -1.0 {
-		p.recordingRepo.UpdateStatus(payload.RecordingID, "rejected", fmt.Sprintf("peak level too high: %.2f dB", peakDB))
+		p.recordingRepo.Reject(payload.RecordingID, "system", fmt.Sprintf("peak level too high: %.2f dB", peakDB))
 		return fmt.Errorf("peak level too high: %.2f", peakDB)
 	}
 

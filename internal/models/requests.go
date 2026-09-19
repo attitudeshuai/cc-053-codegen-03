@@ -56,6 +56,32 @@ type ArbitrateRequest struct {
 	Reason             string `json:"reason"`
 }
 
+// RejectRecordingRequest 退回录音：记录下结论的人与退回原因。
+type RejectRecordingRequest struct {
+	RejectedBy string `json:"rejected_by" binding:"required"`
+	Reason     string `json:"reason" binding:"required"`
+}
+
+// CreateAppealRequest 提交申诉：写明理由，单号由系统生成。
+type CreateAppealRequest struct {
+	Appellant string `json:"appellant" binding:"required"`
+	Reason    string `json:"reason" binding:"required"`
+}
+
+// ReviewAppealRequest 复检申诉：维持或推翻都必须写清依据。
+type ReviewAppealRequest struct {
+	Reviewer string `json:"reviewer" binding:"required"`
+	Decision string `json:"decision" binding:"required,oneof=upheld overturned"`
+	Note     string `json:"note" binding:"required"`
+}
+
+type AppealQuery struct {
+	RecordingID int64  `form:"recording_id"`
+	Status      string `form:"status"`
+	Overdue     string `form:"overdue"` // "true" 只看逾期未受理
+	Pagination
+}
+
 type CreateExportRequest struct {
 	WordlistID int64 `json:"wordlist_id"`
 	TaskID     int64 `json:"task_id"`

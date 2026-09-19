@@ -57,6 +57,9 @@ type Recording struct {
 	RecordedAt   *time.Time `json:"recorded_at"`
 	Status       string     `json:"status"` // pending | processing | completed | rejected
 	RejectReason string     `json:"reject_reason,omitempty"`
+	PrevStatus   string     `json:"prev_status,omitempty"`   // 退回前的状态，申诉推翻后恢复用
+	RejectedBy   string     `json:"rejected_by,omitempty"`   // 下退回结论的人（自动质检为 system）
+	RejectedAt   *time.Time `json:"rejected_at,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
 }
@@ -106,6 +109,36 @@ type ExportJob struct {
 	ErrorMessage string   `json:"error_message,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// Appeal 申诉台账：提交方对录音退回结论不服时发起，限期受理、复检、留痕。
+type Appeal struct {
+	ID           int64      `json:"id"`
+	AppealNo     string     `json:"appeal_no"`   // 申诉单号，如 AP20260918-0001
+	RecordingID  int64      `json:"recording_id"`
+	Appellant    string     `json:"appellant"`   // 提交申诉的人
+	Reason       string     `json:"reason"`      // 申诉理由
+	Status       string     `json:"status"`      // pending | upheld(维持) | overturned(推翻)
+	DeadlineAt   time.Time  `json:"deadline_at"` // 受理期限，超时未处理即逾期
+	PrevStatus   string     `json:"prev_status"` // 退回前状态快照（推翻后恢复）
+	RejectReason string     `json:"reject_reason,omitempty"` // 被申诉的退回结论快照
+	RejectedBy   string     `json:"rejected_by,omitempty"`   // 当初下结论的人，复检人不得与其相同
+	Reviewer     string     `json:"reviewer,omitempty"`
+	ReviewNote   string     `json:"review_note,omitempty"`   // 复检依据（维持/推翻必填）
+	ReviewedAt   *time.Time `json:"reviewed_at,omitempty"`
+	IsOverdue    bool       `json:"is_overdue"` // pending 且已过 deadline_at
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+}
+
+// AppealEvent 申诉处理轨迹：谁在什么时候做了什么。
+type AppealEvent struct {
+	ID        int64     `json:"id"`
+	AppealID  int64     `json:"appeal_id"`
+	Actor     string    `json:"actor"`
+	Action    string    `json:"action"` // filed | upheld | overturned
+	Detail    string    `json:"detail"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // Pagination

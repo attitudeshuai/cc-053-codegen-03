@@ -110,3 +110,36 @@ func (h *RecordingHandler) GetByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, models.APIResponse{Code: 200, Data: recording})
 }
+
+// Reject POST /api/v1/recordings/:id/reject — 退回录音，记录下结论的人与原因。
+func (h *RecordingHandler) Reject(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Code: 400, Message: "invalid id"})
+		return
+	}
+
+	var req models.RejectRecordingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Code: 400, Message: "invalid request", Detail: err.Error()})
+		return
+	}
+
+	if _, err := h.recordingRepo.GetByID(id); err != nil {
+		c.JSON(http.StatusNotFound, models.ErrorResponse{Code: 404, Message: "recording not found"})
+		return
+	}
+
+	if err := h.recordingRepo.Reject(id, req.RejectedBy, req.Reason); err != nil {
+		c.JSON(http.StatusConflict, models.ErrorResponse{Code: 409, Message: "recording cannot be rejected", Detail: err.Error()})
+		return
+	}
+
+	recording, err := h.recordingRepo.GetByID(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Code: 500, Message: "failed to load recording", Detail: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.APIResponse{Code: 200, Message: "recording rejected", Data: recording})
+}

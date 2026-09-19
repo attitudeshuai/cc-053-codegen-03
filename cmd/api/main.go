@@ -55,6 +55,7 @@ func main() {
 	annotationRepo := repository.NewAnnotationRepo(db)
 	arbitrationRepo := repository.NewArbitrationRepo(db)
 	exportRepo := repository.NewExportRepo(db)
+	appealRepo := repository.NewAppealRepo(db)
 
 	// Initialize MinIO service
 	minioSvc, err := services.NewMinIOService(cfg)
@@ -89,6 +90,7 @@ func main() {
 	annotationHandler := handlers.NewAnnotationHandler(annotationRepo, segmentRepo)
 	arbitrationHandler := handlers.NewArbitrationHandler(arbitrationRepo, annotationRepo, segmentRepo)
 	exportHandler := handlers.NewExportHandler(exportRepo, exportSvc)
+	appealHandler := handlers.NewAppealHandler(appealRepo, recordingRepo, cfg)
 
 	// Setup Gin router
 	gin.SetMode(gin.ReleaseMode)
@@ -118,6 +120,13 @@ func main() {
 		v1.POST("/recordings/upload-url", recordingHandler.GetUploadURL)
 		v1.POST("/recordings", recordingHandler.Create)
 		v1.GET("/recordings/:id", recordingHandler.GetByID)
+		v1.POST("/recordings/:id/reject", recordingHandler.Reject)
+		v1.POST("/recordings/:id/appeals", appealHandler.File)
+
+		v1.GET("/appeals", appealHandler.List)
+		v1.GET("/appeals/:id", appealHandler.GetByID)
+		v1.POST("/appeals/:id/review", appealHandler.Review)
+		v1.GET("/appeals/:id/events", appealHandler.Events)
 
 		v1.GET("/segments", segmentHandler.List)
 

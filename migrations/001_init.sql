@@ -46,6 +46,9 @@ CREATE TABLE IF NOT EXISTS recordings (
     recorded_at TIMESTAMPTZ,
     status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','processing','completed','rejected')),
     reject_reason TEXT DEFAULT '',
+    prev_status VARCHAR(20) DEFAULT '',
+    rejected_by VARCHAR(200) DEFAULT '',
+    rejected_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -116,3 +119,38 @@ CREATE INDEX IF NOT EXISTS idx_segments_recording ON segments(recording_id);
 CREATE INDEX IF NOT EXISTS idx_segments_status ON segments(status);
 CREATE INDEX IF NOT EXISTS idx_annotations_segment ON annotations(segment_id);
 CREATE INDEX IF NOT EXISTS idx_arbitrations_segment ON arbitrations(segment_id);
+
+-- 申诉台账：录音被退回后的申诉、受理、复检与审计
+CREATE SEQUENCE IF NOT EXISTS appeal_no_seq;
+
+CREATE TABLE IF NOT EXISTS appeals (
+    id BIGSERIAL PRIMARY KEY,
+    appeal_no VARCHAR(40) NOT NULL UNIQUE,
+    recording_id BIGINT NOT NULL REFERENCES recordings(id),
+    appellant VARCHAR(200) NOT NULL,
+    reason TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','upheld','overturned')),
+    deadline_at TIMESTAMPTZ NOT NULL,
+    prev_status VARCHAR(20) NOT NULL DEFAULT '',
+    reject_reason TEXT DEFAULT '',
+    rejected_by VARCHAR(200) DEFAULT '',
+    reviewer VARCHAR(200) DEFAULT '',
+    review_note TEXT DEFAULT '',
+    reviewed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS appeal_events (
+    id BIGSERIAL PRIMARY KEY,
+    appeal_id BIGINT NOT NULL REFERENCES appeals(id),
+    actor VARCHAR(200) NOT NULL,
+    action VARCHAR(30) NOT NULL CHECK (action IN ('filed','upheld','overturned')),
+    detail TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_appeals_recording ON appeals(recording_id);
+CREATE INDEX IF NOT EXISTS idx_appeals_status_deadline ON appeals(status, deadline_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_appeals_one_pending ON appeals(recording_id) WHERE status='pending';
+CREATE INDEX IF NOT EXISTS idx_appeal_events_appeal ON appeal_events(appeal_id);
