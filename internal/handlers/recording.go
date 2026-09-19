@@ -110,3 +110,42 @@ func (h *RecordingHandler) GetByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, models.APIResponse{Code: 200, Data: recording})
 }
+
+// Reject 退回录音：POST /api/v1/recordings/:id/reject
+// 记下退回前状态（申诉推翻后据此恢复）与下结论的人（复检回避依据）。
+func (h *RecordingHandler) Reject(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Code: 400, Message: "invalid id"})
+		return
+	}
+
+	var req models.RejectRecordingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Code: 400, Message: "invalid request", Detail: err.Error()})
+		return
+	}
+
+	recording, err := h.recordingRepo.GetByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, models.ErrorResponse{Code: 404, Message: "recording not found"})
+		return
+	}
+	if recording.Status == "rejected" {
+		c.JSON(http.StatusConflict, models.ErrorResponse{Code: 409, Message: "recording already rejected"})
+		return
+	}
+
+	if err := h.recordingRepo.Reject(id, req.RejectedBy, req.Reason); err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Code: 500, Message: "failed to reject recording", Detail: err.Error()})
+		return
+	}
+
+	updated, err := h.recordingRepo.GetByID(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Code: 500, Message: "failed to reload recording", Detail: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.APIResponse{Code: 200, Message: "recording rejected", Data: updated})
+}

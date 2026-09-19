@@ -54,6 +54,7 @@ func main() {
 	segmentRepo := repository.NewSegmentRepo(db)
 	annotationRepo := repository.NewAnnotationRepo(db)
 	arbitrationRepo := repository.NewArbitrationRepo(db)
+	appealRepo := repository.NewAppealRepo(db)
 	exportRepo := repository.NewExportRepo(db)
 
 	// Initialize MinIO service
@@ -88,6 +89,7 @@ func main() {
 	segmentHandler := handlers.NewSegmentHandler(segmentRepo)
 	annotationHandler := handlers.NewAnnotationHandler(annotationRepo, segmentRepo)
 	arbitrationHandler := handlers.NewArbitrationHandler(arbitrationRepo, annotationRepo, segmentRepo)
+	appealHandler := handlers.NewAppealHandler(appealRepo, recordingRepo, cfg.AppealSLAHours, cfg.AppealMaxPerRecording)
 	exportHandler := handlers.NewExportHandler(exportRepo, exportSvc)
 
 	// Setup Gin router
@@ -118,6 +120,12 @@ func main() {
 		v1.POST("/recordings/upload-url", recordingHandler.GetUploadURL)
 		v1.POST("/recordings", recordingHandler.Create)
 		v1.GET("/recordings/:id", recordingHandler.GetByID)
+		v1.POST("/recordings/:id/reject", recordingHandler.Reject)
+		v1.POST("/recordings/:id/appeals", appealHandler.Submit)
+
+		v1.GET("/appeals", appealHandler.List)
+		v1.GET("/appeals/:id", appealHandler.GetByID)
+		v1.POST("/appeals/:id/resolve", appealHandler.Resolve)
 
 		v1.GET("/segments", segmentHandler.List)
 

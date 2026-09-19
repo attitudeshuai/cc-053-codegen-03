@@ -41,6 +41,10 @@ type Config struct {
 	// App
 	MaxUploadSize int64 // bytes
 	ExternalURL   string
+
+	// Appeal 申诉台账
+	AppealSLAHours        int // 受理期限（小时），超期未处理即逾期
+	AppealMaxPerRecording int // 同一录音申诉次数上限，达到后不再受理
 }
 
 func Load() *Config {
@@ -69,6 +73,8 @@ func Load() *Config {
 		AsynqConcurrency: getEnvInt("ASYNQ_CONCURRENCY", 2),
 		MaxUploadSize:   int64(getEnvInt("MAX_UPLOAD_SIZE", 500*1024*1024)),
 		ExternalURL:    getEnv("EXTERNAL_URL", "http://localhost:9053"),
+		AppealSLAHours:        getEnvInt("APPEAL_SLA_HOURS", 72),
+		AppealMaxPerRecording: getEnvInt("APPEAL_MAX_PER_RECORDING", 2),
 	}
 	return cfg
 }

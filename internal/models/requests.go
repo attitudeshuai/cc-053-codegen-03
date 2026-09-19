@@ -56,6 +56,29 @@ type ArbitrateRequest struct {
 	Reason             string `json:"reason"`
 }
 
+type RejectRecordingRequest struct {
+	RejectedBy string `json:"rejected_by" binding:"required"` // 下退回结论的人
+	Reason     string `json:"reason" binding:"required"`
+}
+
+type CreateAppealRequest struct {
+	Appellant string `json:"appellant" binding:"required"` // 提交方（申诉人）
+	Reason    string `json:"reason" binding:"required"`    // 申诉理由
+}
+
+type ResolveAppealRequest struct {
+	Reviewer string `json:"reviewer" binding:"required"`                    // 复检人（不能是当初下结论的人）
+	Decision string `json:"decision" binding:"required,oneof=upheld overturned"` // upheld 维持 | overturned 推翻
+	Basis    string `json:"basis" binding:"required"`                       // 维持/推翻的依据
+}
+
+type AppealQuery struct {
+	RecordingID int64  `form:"recording_id"`
+	Status      string `form:"status"`  // pending | upheld | overturned
+	Overdue     string `form:"overdue"` // "true" 只看超期未处理的
+	Pagination
+}
+
 type CreateExportRequest struct {
 	WordlistID int64 `json:"wordlist_id"`
 	TaskID     int64 `json:"task_id"`

@@ -47,18 +47,20 @@ type Task struct {
 }
 
 type Recording struct {
-	ID           int64      `json:"id"`
-	TaskID       int64      `json:"task_id"`
-	ObjectKey    string     `json:"object_key"`
-	DurationMs   int        `json:"duration_ms"`
-	SampleRate   int        `json:"sample_rate"`
-	PeakDB       float64    `json:"peak_db"`
-	Device       string     `json:"device"`
-	RecordedAt   *time.Time `json:"recorded_at"`
-	Status       string     `json:"status"` // pending | processing | completed | rejected
-	RejectReason string     `json:"reject_reason,omitempty"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
+	ID              int64      `json:"id"`
+	TaskID          int64      `json:"task_id"`
+	ObjectKey       string     `json:"object_key"`
+	DurationMs      int        `json:"duration_ms"`
+	SampleRate      int        `json:"sample_rate"`
+	PeakDB          float64    `json:"peak_db"`
+	Device          string     `json:"device"`
+	RecordedAt      *time.Time `json:"recorded_at"`
+	Status          string     `json:"status"` // pending | processing | completed | rejected
+	RejectReason    string     `json:"reject_reason,omitempty"`
+	RejectedBy      string     `json:"rejected_by,omitempty"`       // 下退回结论的人（申诉复检须回避）
+	PreRejectStatus string     `json:"pre_reject_status,omitempty"` // 退回前状态，申诉推翻后恢复
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
 type Segment struct {
@@ -95,6 +97,35 @@ type Arbitration struct {
 	Arbiter            string    `json:"arbiter"`
 	Reason             string    `json:"reason"`
 	CreatedAt          time.Time `json:"created_at"`
+}
+
+// Appeal 申诉台账：提交方对录音退回结论不服时发起，一单到底。
+type Appeal struct {
+	ID                   int64      `json:"id"`
+	TicketNo             string     `json:"ticket_no"` // 申诉单号，如 AP20260918-000042
+	RecordingID          int64      `json:"recording_id"`
+	Appellant            string     `json:"appellant"`              // 提交方（申诉人）
+	Reason               string     `json:"reason"`                 // 申诉理由
+	Status               string     `json:"status"`                 // pending | upheld | overturned
+	OriginalRejectedBy   string     `json:"original_rejected_by"`   // 当初下退回结论的人（快照，复检回避依据）
+	OriginalRejectReason string     `json:"original_reject_reason"` // 被申诉的退回结论（快照）
+	DeadlineAt           time.Time  `json:"deadline_at"`            // 受理期限
+	IsOverdue            bool       `json:"is_overdue"`             // 受理期限内未处理（列表计算字段）
+	Reviewer             string     `json:"reviewer,omitempty"`
+	DecisionBasis        string     `json:"decision_basis,omitempty"` // 维持/推翻的依据
+	ResolvedAt           *time.Time `json:"resolved_at,omitempty"`
+	CreatedAt            time.Time  `json:"created_at"`
+	UpdatedAt            time.Time  `json:"updated_at"`
+}
+
+// AppealEvent 申诉处理留痕：每一次动作都能查到谁在什么时候做了什么。
+type AppealEvent struct {
+	ID        int64     `json:"id"`
+	AppealID  int64     `json:"appeal_id"`
+	Action    string    `json:"action"` // submitted | upheld | overturned
+	Actor     string    `json:"actor"`
+	Detail    string    `json:"detail"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type ExportJob struct {

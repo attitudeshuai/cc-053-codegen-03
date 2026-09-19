@@ -41,6 +41,11 @@ POST /api/v1/recordings                   登记已上传录音（触发切分�
 GET  /api/v1/segments?task_id=&status=    分段列表（待标注/待仲裁/已完成）
 PUT  /api/v1/segments/{id}/annotation     提交转写（乐观锁 version）
 POST /api/v1/segments/{id}/arbitrate      仲裁裁决
+POST /api/v1/recordings/{id}/reject       退回录音（记录结论人与退回前状态）
+POST /api/v1/recordings/{id}/appeals      提交申诉（返回申诉单号与受理期限）
+GET  /api/v1/appeals                      申诉台账（status/overdue 过滤，超期单置顶，附 overdue_count）
+GET  /api/v1/appeals/{id}                 申诉详情（含全程处理留痕）
+POST /api/v1/appeals/{id}/resolve         复检处理（回避原结论人；维持/推翻均须依据；推翻自动回滚录音）
 GET  /api/v1/exports                      创建导出任务（异步）
 GET  /api/v1/exports/{job_id}             导出进度与下载链接
 ```

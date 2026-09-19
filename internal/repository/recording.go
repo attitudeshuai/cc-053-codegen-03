@@ -31,9 +31,9 @@ func (r *RecordingRepo) Create(rec *models.Recording) error {
 func (r *RecordingRepo) GetByID(id int64) (*models.Recording, error) {
 	rec := &models.Recording{}
 	err := r.db.QueryRow(
-		`SELECT id, task_id, object_key, duration_ms, sample_rate, peak_db, device, recorded_at, status, reject_reason, created_at, updated_at
+		`SELECT id, task_id, object_key, duration_ms, sample_rate, peak_db, device, recorded_at, status, reject_reason, rejected_by, pre_reject_status, created_at, updated_at
 		 FROM recordings WHERE id=$1`, id,
-	).Scan(&rec.ID, &rec.TaskID, &rec.ObjectKey, &rec.DurationMs, &rec.SampleRate, &rec.PeakDB, &rec.Device, &rec.RecordedAt, &rec.Status, &rec.RejectReason, &rec.CreatedAt, &rec.UpdatedAt)
+	).Scan(&rec.ID, &rec.TaskID, &rec.ObjectKey, &rec.DurationMs, &rec.SampleRate, &rec.PeakDB, &rec.Device, &rec.RecordedAt, &rec.Status, &rec.RejectReason, &rec.RejectedBy, &rec.PreRejectStatus, &rec.CreatedAt, &rec.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -48,9 +48,18 @@ func (r *RecordingRepo) UpdateStatus(id int64, status string, rejectReason strin
 	return err
 }
 
+// Reject 退回录音：原子地记下退回前状态（申诉推翻后据此恢复）与下结论的人（复检回避依据）。
+func (r *RecordingRepo) Reject(id int64, rejectedBy string, reason string) error {
+	_, err := r.db.Exec(
+		`UPDATE recordings SET pre_reject_status=status, status='rejected', reject_reason=$1, rejected_by=$2, updated_at=NOW() WHERE id=$3`,
+		reason, rejectedBy, id,
+	)
+	return err
+}
+
 func (r *RecordingRepo) ListByTask(taskID int64) ([]*models.Recording, error) {
 	rows, err := r.db.Query(
-		`SELECT id, task_id, object_key, duration_ms, sample_rate, peak_db, device, recorded_at, status, reject_reason, created_at, updated_at
+		`SELECT id, task_id, object_key, duration_ms, sample_rate, peak_db, device, recorded_at, status, reject_reason, rejected_by, pre_reject_status, created_at, updated_at
 		 FROM recordings WHERE task_id=$1 ORDER BY id`, taskID,
 	)
 	if err != nil {
@@ -61,7 +70,7 @@ func (r *RecordingRepo) ListByTask(taskID int64) ([]*models.Recording, error) {
 	var recordings []*models.Recording
 	for rows.Next() {
 		rec := &models.Recording{}
-		if err := rows.Scan(&rec.ID, &rec.TaskID, &rec.ObjectKey, &rec.DurationMs, &rec.SampleRate, &rec.PeakDB, &rec.Device, &rec.RecordedAt, &rec.Status, &rec.RejectReason, &rec.CreatedAt, &rec.UpdatedAt); err != nil {
+		if err := rows.Scan(&rec.ID, &rec.TaskID, &rec.ObjectKey, &rec.DurationMs, &rec.SampleRate, &rec.PeakDB, &rec.Device, &rec.RecordedAt, &rec.Status, &rec.RejectReason, &rec.RejectedBy, &rec.PreRejectStatus, &rec.CreatedAt, &rec.UpdatedAt); err != nil {
 			return nil, err
 		}
 		recordings = append(recordings, rec)

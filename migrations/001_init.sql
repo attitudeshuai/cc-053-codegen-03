@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS recordings (
     recorded_at TIMESTAMPTZ,
     status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','processing','completed','rejected')),
     reject_reason TEXT DEFAULT '',
+    rejected_by VARCHAR(200) DEFAULT '',
+    pre_reject_status VARCHAR(20) DEFAULT '',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -115,4 +117,36 @@ CREATE INDEX IF NOT EXISTS idx_recordings_task ON recordings(task_id);
 CREATE INDEX IF NOT EXISTS idx_segments_recording ON segments(recording_id);
 CREATE INDEX IF NOT EXISTS idx_segments_status ON segments(status);
 CREATE INDEX IF NOT EXISTS idx_annotations_segment ON annotations(segment_id);
+-- 申诉台账（appeals）与处理留痕（appeal_events）
+CREATE TABLE IF NOT EXISTS appeals (
+    id BIGSERIAL PRIMARY KEY,
+    ticket_no VARCHAR(40) NOT NULL UNIQUE,
+    recording_id BIGINT NOT NULL REFERENCES recordings(id),
+    appellant VARCHAR(200) NOT NULL,
+    reason TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','upheld','overturned')),
+    original_rejected_by VARCHAR(200) DEFAULT '',
+    original_reject_reason TEXT DEFAULT '',
+    deadline_at TIMESTAMPTZ NOT NULL,
+    reviewer VARCHAR(200) DEFAULT '',
+    decision_basis TEXT DEFAULT '',
+    resolved_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS appeal_events (
+    id BIGSERIAL PRIMARY KEY,
+    appeal_id BIGINT NOT NULL REFERENCES appeals(id),
+    action VARCHAR(30) NOT NULL CHECK (action IN ('submitted','upheld','overturned')),
+    actor VARCHAR(200) NOT NULL,
+    detail TEXT DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE SEQUENCE IF NOT EXISTS appeal_ticket_seq;
+
 CREATE INDEX IF NOT EXISTS idx_arbitrations_segment ON arbitrations(segment_id);
+CREATE INDEX IF NOT EXISTS idx_appeals_recording ON appeals(recording_id);
+CREATE INDEX IF NOT EXISTS idx_appeals_status_deadline ON appeals(status, deadline_at);
+CREATE INDEX IF NOT EXISTS idx_appeal_events_appeal ON appeal_events(appeal_id);
